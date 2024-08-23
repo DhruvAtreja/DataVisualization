@@ -24,8 +24,6 @@ class WorkflowManager:
         workflow.add_edge("validate_and_fix_sql", "execute_sql")
         workflow.add_edge("execute_sql", "format_results")
         workflow.add_edge("execute_sql", "choose_visualization")
-        workflow.add_edge("format_results", "end")
-        workflow.add_edge("choose_visualization", "end")
 
         workflow.set_entry_point("parse_question")
 

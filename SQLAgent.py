@@ -1,4 +1,5 @@
 
+import sqlite3
 from langchain_core.prompts import ChatPromptTemplate
 from DatabaseManager import DatabaseManager
 from LLMManager import LLMManager
@@ -14,7 +15,7 @@ class SQLAgent:
         schema = self.db_manager.get_schema()
 
         prompt = ChatPromptTemplate.from_messages([
-            ("system", "You are a data analyst that can help summarize SQL tables and helps parse user questions about a database. Given the question and database schema, identify the relevant tables and columns."),
+            ("system", "You are a data analyst that can help summarize SQL tables and helps parse user questions about a database. Given the question and database schema, identify the relevant tables and columns. If the question is not relevant to the database, respond with 'NOT_RELEVANT'."),
             ("human", "===Database schema:\n{schema}\n\n===User question:\n{question}\n\nIdentify relevant tables and columns:")
         ])
 
@@ -25,6 +26,10 @@ class SQLAgent:
         """Generate SQL query based on parsed question."""
         question = state['question']
         parsed_question = state['parsed_question']
+
+        if parsed_question == 'NOT_RELEVANT':
+            return {"sql_query": "NOT_RELEVANT"}
+    
         schema = self.db_manager.get_schema()
 
         prompt = ChatPromptTemplate.from_messages([
@@ -63,6 +68,10 @@ Generate SQL query string'''),
     def validate_and_fix_sql(self, state: dict) -> dict:
         """Validate and fix the generated SQL query."""
         sql_query = state['sql_query']
+
+        if sql_query == "NOT_RELEVANT":
+            return {"sql_query": "NOT_RELEVANT", "sql_valid": False}
+    
         schema = self.db_manager.get_schema()
 
         prompt = ChatPromptTemplate.from_messages([
@@ -103,6 +112,10 @@ Validate and fix the SQL query:'''),
     def execute_sql(self, state: dict) -> dict:
         """Execute SQL query and return results."""
         query = state['sql_query']
+        
+        if query == "NOT_RELEVANT":
+            return {"results": "NOT_RELEVANT"}
+
         try:
             results = self.db_manager.execute_query(query)
             return {"results": results}
@@ -113,6 +126,9 @@ Validate and fix the SQL query:'''),
         """Format query results into a human-readable response."""
         question = state['question']
         results = state['results']
+
+        if results == "NOT_RELEVANT":
+            return {"answer": "Sorry, I can only give answers relevant to the database."}
 
         prompt = ChatPromptTemplate.from_messages([
             ("system", "You are an AI assistant that formats database query results into a human-readable response. Provide a clear and concise answer to the user's question based on the query results."),
@@ -127,6 +143,9 @@ Validate and fix the SQL query:'''),
         question = state['question']
         results = state['results']
         sql_query = state['sql_query']
+
+        if results == "NOT_RELEVANT":
+            return {"visualization": "None", "visualization_reasoning": "No visualization needed for irrelevant questions."}
 
         prompt = ChatPromptTemplate.from_messages([
             ("system", '''
