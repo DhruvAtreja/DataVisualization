@@ -1,6 +1,7 @@
 from langgraph.graph import StateGraph
-from workflow.State import State
-from SQLAgent import SQLAgent
+from my_agent.State import State
+from my_agent.SQLAgent import SQLAgent
+
 
 class WorkflowManager:
     def __init__(self):
@@ -28,6 +29,9 @@ class WorkflowManager:
         workflow.set_entry_point("parse_question")
 
         return workflow
+    
+    def returnGraph(self):
+        return self.create_workflow().compile()
 
     def run_sql_agent(self, question: str) -> dict:
         """Run the SQL agent workflow and return the formatted answer and visualization recommendation."""

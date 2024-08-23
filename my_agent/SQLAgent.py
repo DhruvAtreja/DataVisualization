@@ -1,8 +1,8 @@
 
 import sqlite3
 from langchain_core.prompts import ChatPromptTemplate
-from DatabaseManager import DatabaseManager
-from LLMManager import LLMManager
+from my_agent.DatabaseManager import DatabaseManager
+from my_agent.LLMManager import LLMManager
 
 class SQLAgent:
     def __init__(self):
