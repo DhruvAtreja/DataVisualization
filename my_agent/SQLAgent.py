@@ -2,8 +2,10 @@ import sqlite3
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 from typing import List, Dict
+import json
 from my_agent.DatabaseManager import DatabaseManager
 from my_agent.LLMManager import LLMManager
+from my_agent.graph_instructions import graph_instructions
 
 class SQLAgent:
     def __init__(self):
@@ -193,21 +195,27 @@ Validate and fix the SQL query:'''),
         sql_query = state['sql_query']
 
         if results == "NOT_RELEVANT":
-            return {"visualization": "None", "visualization_reasoning": "No visualization needed for irrelevant questions."}
+            return {"visualization": "none", "visualization_reasoning": "No visualization needed for irrelevant questions."}
 
         prompt = ChatPromptTemplate.from_messages([
             ("system", '''
 You are an AI assistant that recommends appropriate data visualizations. Based on the user's question, SQL query, and query results, suggest the most suitable type of graph or chart to visualize the data. If no visualization is appropriate, indicate that.
 
-Available chart types:
-- Column Graphs
-- Bar Graphs
-- Scatter Plots
-- Line Graphs
-- Pie Charts
+Available chart types and their use cases:
+- Bar/Column Graphs: Best for comparing categorical data or showing changes over time when categories are discrete. Use for questions like "What are the sales figures for each product?" or "How does the population of cities compare?"
+- Scatter Plots: Useful for identifying relationships or correlations between two numerical variables. Use for questions like "Is there a relationship between advertising spend and sales?" or "How do height and weight correlate in the dataset?"
+- Pie Charts: Ideal for showing proportions or percentages within a whole. Use for questions like "What is the market share distribution among different companies?" or "What percentage of the total revenue comes from each product?"
+- Line Graphs: Best for showing trends over time with continuous data. Use for questions like "How have website visits changed over the year?" or "What is the trend in temperature over the past decade?"
+
+Consider these types of questions when recommending a visualization:
+1. Aggregations and Summarizations (e.g., "What is the average revenue by month?" - Line Graph)
+2. Comparisons (e.g., "Compare the sales figures of Product A and Product B over the last year." - Line or Column Graph)
+3. Trends Over Time (e.g., "What is the trend in the number of active users over the past year?" - Line Graph)
+4. Proportions (e.g., "What percentage of sales came from each region?" - Pie Chart)
+5. Correlations (e.g., "Is there a correlation between marketing spend and revenue?" - Scatter Plot)
 
 Provide your response in the following format:
-Recommended Visualization: [Chart type or "None"]
+Recommended Visualization: [Chart type or "None"]. ONLY use the following names: bar, horizontal_bar, line, pie, scatter, none
 Reason: [Brief explanation for your recommendation]
 '''),
             ("human", '''
@@ -226,3 +234,36 @@ Recommend a visualization:'''),
         reason = lines[1].split(': ')[1]
 
         return {"visualization": visualization, "visualization_reason": reason}
+
+    def format_data_for_visualization(self, state: dict) -> dict:
+        """Format the data for the chosen visualization type."""
+        visualization = state['visualization']
+        results = state['results']
+        visualization_reason = state['visualization_reason']
+
+        if visualization == "none":
+            return {"formatted_data": None, "graph_type": None}
+
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", '''
+You are a Data expert who formats data according to the required needs. You are given some data and the format you need to format it in.
+'''),
+            ("human", '''
+===Data:
+{results}
+
+===Format:
+{graph_instructions[visualization]}
+
+'''),
+        ])
+
+        response = self.llm_manager.invoke(prompt, visualization=visualization, visualization_reason=visualization_reason, results=results)
+        
+        try:
+            formatted_data = json.loads(response)
+            return {"formatted_data_for_visualization": formatted_data}
+        except json.JSONDecodeError:
+            return {"error": "Failed to format data for visualization", "raw_response": response}
+
+    

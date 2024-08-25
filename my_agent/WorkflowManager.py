@@ -19,7 +19,7 @@ class WorkflowManager:
         workflow.add_node("execute_sql", self.sql_agent.execute_sql)
         workflow.add_node("format_results", self.sql_agent.format_results)
         workflow.add_node("choose_visualization", self.sql_agent.choose_visualization)
-
+        workflow.add_node("format_data_for_visualization", self.sql_agent.format_data_for_visualization)
         # Define edges
         workflow.add_edge("parse_question", "get_unique_nouns")
         workflow.add_edge("get_unique_nouns", "generate_sql")
@@ -27,7 +27,7 @@ class WorkflowManager:
         workflow.add_edge("validate_and_fix_sql", "execute_sql")
         workflow.add_edge("execute_sql", "format_results")
         workflow.add_edge("execute_sql", "choose_visualization")
-
+        workflow.add_edge("choose_visualization", "format_data_for_visualization")
         workflow.set_entry_point("parse_question")
 
         return workflow
@@ -42,5 +42,6 @@ class WorkflowManager:
         return {
             "answer": result['answer'],
             "visualization": result['visualization'],
-            "visualization_reason": result['visualization_reason']
+            "visualization_reason": result['visualization_reason'],
+            "formatted_data_for_visualization": result['formatted_data_for_visualization']
         }
