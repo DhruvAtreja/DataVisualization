@@ -21,16 +21,16 @@ Given the question and database schema, identify the relevant tables and columns
 If the question is not relevant to the database, set is_relevant to false.
 
 Your response should be in the following JSON format:
-{
+{{
     "is_relevant": boolean,
     "relevant_tables": [
-        {
+        {{
             "table_name": string,
             "columns": [string],
             "noun_columns": [string]
-        }
+        }}
     ]
-}
+}}
 
 Note: The "noun_columns" field should contain only the columns that likely contain nouns relevant to the question.
 '''),
@@ -56,7 +56,8 @@ Note: The "noun_columns" field should contain only the columns that likely conta
             
             if noun_columns:
                 # Get unique values from the noun columns
-                query = f"SELECT DISTINCT {', '.join(noun_columns)} FROM {table_name}"
+                column_names = ', '.join(f"'{col}'" for col in noun_columns)
+                query = f"SELECT DISTINCT {column_names} FROM '{table_name}'"
                 results = self.db_manager.execute_query(query)
                 
                 # Add all unique values to the set
