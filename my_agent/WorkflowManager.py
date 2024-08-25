@@ -13,6 +13,7 @@ class WorkflowManager:
 
         # Add nodes to the graph
         workflow.add_node("parse_question", self.sql_agent.parse_question)
+        workflow.add_node("get_unique_nouns", self.sql_agent.get_unique_nouns)
         workflow.add_node("generate_sql", self.sql_agent.generate_sql)
         workflow.add_node("validate_and_fix_sql", self.sql_agent.validate_and_fix_sql)
         workflow.add_node("execute_sql", self.sql_agent.execute_sql)
@@ -20,7 +21,8 @@ class WorkflowManager:
         workflow.add_node("choose_visualization", self.sql_agent.choose_visualization)
 
         # Define edges
-        workflow.add_edge("parse_question", "generate_sql")
+        workflow.add_edge("parse_question", "get_unique_nouns")
+        workflow.add_edge("get_unique_nouns", "generate_sql")
         workflow.add_edge("generate_sql", "validate_and_fix_sql")
         workflow.add_edge("validate_and_fix_sql", "execute_sql")
         workflow.add_edge("execute_sql", "format_results")

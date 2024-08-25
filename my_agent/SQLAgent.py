@@ -1,6 +1,7 @@
-
 import sqlite3
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import JsonOutputParser
+from typing import List, Dict
 from my_agent.DatabaseManager import DatabaseManager
 from my_agent.LLMManager import LLMManager
 
@@ -15,26 +16,69 @@ class SQLAgent:
         schema = self.db_manager.get_schema()
 
         prompt = ChatPromptTemplate.from_messages([
-            ("system", "You are a data analyst that can help summarize SQL tables and helps parse user questions about a database. Given the question and database schema, identify the relevant tables and columns. If the question is not relevant to the database, respond with 'NOT_RELEVANT'."),
+            ("system", '''You are a data analyst that can help summarize SQL tables and parse user questions about a database. 
+Given the question and database schema, identify the relevant tables and columns. 
+If the question is not relevant to the database, set is_relevant to false.
+
+Your response should be in the following JSON format:
+{
+    "is_relevant": boolean,
+    "relevant_tables": [
+        {
+            "table_name": string,
+            "columns": [string],
+            "noun_columns": [string]
+        }
+    ]
+}
+
+Note: The "noun_columns" field should contain only the columns that likely contain nouns relevant to the question.
+'''),
             ("human", "===Database schema:\n{schema}\n\n===User question:\n{question}\n\nIdentify relevant tables and columns:")
         ])
 
+        output_parser = JsonOutputParser()
         response = self.llm_manager.invoke(prompt, schema=schema, question=question)
-        return {"parsed_question": response}
+        parsed_response = output_parser.parse(response)
+        return {"parsed_question": parsed_response}
+
+    def get_unique_nouns(self, state: dict) -> dict:
+        """Find unique nouns in relevant tables and columns."""
+        parsed_question = state['parsed_question']
+        
+        if not parsed_question['is_relevant']:
+            return {"unique_nouns": []}
+
+        unique_nouns = set()
+        for table_info in parsed_question['relevant_tables']:
+            table_name = table_info['table_name']
+            noun_columns = table_info['noun_columns']
+            
+            if noun_columns:
+                # Get unique values from the noun columns
+                query = f"SELECT DISTINCT {', '.join(noun_columns)} FROM {table_name}"
+                results = self.db_manager.execute_query(query)
+                
+                # Add all unique values to the set
+                for row in results:
+                    unique_nouns.update(str(value) for value in row if value)
+
+        return {"unique_nouns": list(unique_nouns)}
 
     def generate_sql(self, state: dict) -> dict:
-        """Generate SQL query based on parsed question."""
+        """Generate SQL query based on parsed question and unique nouns."""
         question = state['question']
         parsed_question = state['parsed_question']
+        unique_nouns = state['unique_nouns']
 
-        if parsed_question == 'NOT_RELEVANT':
+        if not parsed_question['is_relevant']:
             return {"sql_query": "NOT_RELEVANT"}
     
         schema = self.db_manager.get_schema()
 
         prompt = ChatPromptTemplate.from_messages([
             ("system", '''
-You are an AI assistant that generates SQL queries based on user questions and database schema. Generate a valid SQL query to answer the user's question.
+You are an AI assistant that generates SQL queries based on user questions, database schema, and unique nouns found in the relevant tables. Generate a valid SQL query to answer the user's question.
 
 Here are some examples:
 
@@ -47,7 +91,7 @@ Answer: SELECT product_name, SUM(quantity * price) as total_revenue FROM sales G
 3. What is the market share of each product?
 Answer: SELECT product_name, SUM(quantity) * 100.0 / (SELECT SUM(quantity) FROM sales) as market_share FROM sales GROUP BY product_name ORDER BY market_share DESC
 
-Just give the query string. Do not format it.
+Just give the query string. Do not format it. Make sure to use the correct spellings of nouns as provided in the unique nouns list.
 '''),
             ("human", '''===Database schema:
 {schema}
@@ -58,10 +102,13 @@ Just give the query string. Do not format it.
 ===Relevant tables and columns:
 {parsed_question}
 
+===Unique nouns in relevant tables:
+{unique_nouns}
+
 Generate SQL query string'''),
         ])
 
-        response = self.llm_manager.invoke(prompt, schema=schema, question=question, parsed_question=parsed_question)
+        response = self.llm_manager.invoke(prompt, schema=schema, question=question, parsed_question=parsed_question, unique_nouns=unique_nouns)
         print(f"Generated SQL query: {response}")
         return {"sql_query": response}
 
