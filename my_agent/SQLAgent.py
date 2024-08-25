@@ -20,7 +20,7 @@ class SQLAgent:
         prompt = ChatPromptTemplate.from_messages([
             ("system", '''You are a data analyst that can help summarize SQL tables and parse user questions about a database. 
 Given the question and database schema, identify the relevant tables and columns. 
-If the question is not relevant to the database, set is_relevant to false.
+If the question is not relevant to the database or if there is not enough information to answer the question, set is_relevant to false.
 
 Your response should be in the following JSON format:
 {{
@@ -75,13 +75,15 @@ Note: The "noun_columns" field should contain only the columns that likely conta
         unique_nouns = state['unique_nouns']
 
         if not parsed_question['is_relevant']:
-            return {"sql_query": "NOT_RELEVANT"}
+            return {"sql_query": "NOT_RELEVANT", "is_relevant": False}
     
         schema = self.db_manager.get_schema()
 
         prompt = ChatPromptTemplate.from_messages([
             ("system", '''
 You are an AI assistant that generates SQL queries based on user questions, database schema, and unique nouns found in the relevant tables. Generate a valid SQL query to answer the user's question.
+
+If there is not enough information to write a SQL query, respond with "NOT_ENOUGH_INFO".
 
 Here are some examples:
 
@@ -113,7 +115,11 @@ Generate SQL query string'''),
 
         response = self.llm_manager.invoke(prompt, schema=schema, question=question, parsed_question=parsed_question, unique_nouns=unique_nouns)
         print(f"Generated SQL query: {response}")
-        return {"sql_query": response}
+        
+        if response.strip() == "NOT_ENOUGH_INFO":
+            return {"sql_query": "NOT_RELEVANT", "is_relevant": False}
+        else:
+            return {"sql_query": response, "is_relevant": True}
 
     def validate_and_fix_sql(self, state: dict) -> dict:
         """Validate and fix the generated SQL query."""
@@ -121,6 +127,8 @@ Generate SQL query string'''),
 
         if sql_query == "NOT_RELEVANT":
             return {"sql_query": "NOT_RELEVANT", "sql_valid": False}
+        
+
     
         schema = self.db_manager.get_schema()
 
@@ -131,6 +139,8 @@ You are an AI assistant that validates and fixes SQL queries. Your task is to:
 2. Ensure all table and column names are correctly spelled and exist in the schema.
 3. If there are any issues, fix them and provide the corrected SQL query.
 4. If no issues are found, return the original query.
+
+            
 
 Provide your response in the following format:
 Valid: [Yes/No]
@@ -181,7 +191,7 @@ Validate and fix the SQL query:'''),
             return {"answer": "Sorry, I can only give answers relevant to the database."}
 
         prompt = ChatPromptTemplate.from_messages([
-            ("system", "You are an AI assistant that formats database query results into a human-readable response. Provide a clear and concise answer to the user's question based on the query results."),
+            ("system", "You are an AI assistant that formats database query results into a human-readable response. Give a conclusion to the user's question based on the query results. Do not give the answer in markdown format. Only give the answer in one line."),
             ("human", "User question: {question}\n\nQuery results: {results}\n\nFormatted response:"),
         ])
 
@@ -193,6 +203,7 @@ Validate and fix the SQL query:'''),
         question = state['question']
         results = state['results']
         sql_query = state['sql_query']
+        print(f"Results: {results}")
 
         if results == "NOT_RELEVANT":
             return {"visualization": "none", "visualization_reasoning": "No visualization needed for irrelevant questions."}
@@ -202,10 +213,11 @@ Validate and fix the SQL query:'''),
 You are an AI assistant that recommends appropriate data visualizations. Based on the user's question, SQL query, and query results, suggest the most suitable type of graph or chart to visualize the data. If no visualization is appropriate, indicate that.
 
 Available chart types and their use cases:
-- Bar/Column Graphs: Best for comparing categorical data or showing changes over time when categories are discrete. Use for questions like "What are the sales figures for each product?" or "How does the population of cities compare?"
+- Bar Graphs: Best for comparing categorical data or showing changes over time when categories are discrete and the number of categories is more than 2. Use for questions like "What are the sales figures for each product?" or "How does the population of cities compare?"
+- Horizontal Bar Graphs: Best for comparing categorical data or showing changes over time when the number of categories is small or the disparity between categories is large. Use for questions like "Show the revenue of A and B?" or "How does the population of 2 cities compare?" or when the disparity between categories is large.
 - Scatter Plots: Useful for identifying relationships or correlations between two numerical variables. Use for questions like "Is there a relationship between advertising spend and sales?" or "How do height and weight correlate in the dataset?"
 - Pie Charts: Ideal for showing proportions or percentages within a whole. Use for questions like "What is the market share distribution among different companies?" or "What percentage of the total revenue comes from each product?"
-- Line Graphs: Best for showing trends over time with continuous data. Use for questions like "How have website visits changed over the year?" or "What is the trend in temperature over the past decade?"
+- Line Graphs: Best for showing trends over time or with continuous data. Best used when both x axis and y axis are continuous. Use for questions like "How have website visits changed over the year?" or "What is the trend in temperature over the past decade?"
 
 Consider these types of questions when recommending a visualization:
 1. Aggregations and Summarizations (e.g., "What is the average revenue by month?" - Line Graph)
@@ -239,30 +251,25 @@ Recommend a visualization:'''),
         """Format the data for the chosen visualization type."""
         visualization = state['visualization']
         results = state['results']
-        visualization_reason = state['visualization_reason']
 
         if visualization == "none":
-            return {"formatted_data": None, "graph_type": None}
+            return {"formatted_data_for_visualization": None}
+            
+        instructions = graph_instructions[visualization]
 
         prompt = ChatPromptTemplate.from_messages([
-            ("system", '''
-You are a Data expert who formats data according to the required needs. You are given some data and the format you need to format it in.
-'''),
-            ("human", '''
-===Data:
-{results}
-
-===Format:
-{graph_instructions[visualization]}
-
-'''),
+            ("system", "You are a Data expert who formats data according to the required needs. You are given some data and the format you need to format it in."),
+            ("human", 'Data: {results}\n\nUse the following example to structure the data: {instructions}. Just give the json string. Do not format it'),
         ])
 
-        response = self.llm_manager.invoke(prompt, visualization=visualization, visualization_reason=visualization_reason, results=results)
+        response = self.llm_manager.invoke(prompt, results=results, instructions=instructions)
         
         try:
-            formatted_data = json.loads(response)
-            return {"formatted_data_for_visualization": formatted_data}
+            print(f"Response: {response}")
+            # Convert the response to JSON
+            formatted_data_for_visualization = json.loads(response)
+            print(f"Formatted Data for Visualization: {formatted_data_for_visualization}")
+            return {"formatted_data_for_visualization": formatted_data_for_visualization}
         except json.JSONDecodeError:
             return {"error": "Failed to format data for visualization", "raw_response": response}
 
