@@ -34,7 +34,7 @@ Your response should be in the following JSON format:
     ]
 }}
 
-Note: The "noun_columns" field should contain only the columns that likely contain nouns relevant to the question.
+The "noun_columns" field should contain only the columns that are relevant to the question and contain nouns or names, for example, the column "Artist name" contains nouns relevant to the question "What are the top selling artists?", but the column "Artist ID" is not relevant because it does not contain a noun. Do not include columns that contain numbers.
 '''),
             ("human", "===Database schema:\n{schema}\n\n===User question:\n{question}\n\nIdentify relevant tables and columns:")
         ])
@@ -55,16 +55,18 @@ Note: The "noun_columns" field should contain only the columns that likely conta
         for table_info in parsed_question['relevant_tables']:
             table_name = table_info['table_name']
             noun_columns = table_info['noun_columns']
+            print(f"noun columns: {noun_columns}")
             
             if noun_columns:
-                # Get unique values from the noun columns
-                column_names = ', '.join(f"'{col}'" for col in noun_columns)
-                query = f"SELECT DISTINCT {column_names} FROM '{table_name}'"
+                column_names = ', '.join(f"`{col}`" for col in noun_columns)
+                query = f"SELECT DISTINCT {column_names} FROM `{table_name}`"
+                print(f"query: {query}")
                 results = self.db_manager.execute_query(state['uuid'], query)
-                
-                # Add all unique values to the set
+                print(f"noun results: {results}")
                 for row in results:
                     unique_nouns.update(str(value) for value in row if value)
+
+        print(f"unique_nouns: {unique_nouns}")
 
         return {"unique_nouns": list(unique_nouns)}
 
@@ -128,8 +130,6 @@ Generate SQL query string'''),
         if sql_query == "NOT_RELEVANT":
             return {"sql_query": "NOT_RELEVANT", "sql_valid": False}
         
-
-    
         schema = self.db_manager.get_schema(state['uuid'])
 
         prompt = ChatPromptTemplate.from_messages([
@@ -139,8 +139,6 @@ You are an AI assistant that validates and fixes SQL queries. Your task is to:
 2. Ensure all table and column names are correctly spelled and exist in the schema.
 3. If there are any issues, fix them and provide the corrected SQL query.
 4. If no issues are found, return the original query.
-
-            
 
 Provide your response in the following format:
 Valid: [Yes/No]
@@ -158,7 +156,6 @@ Validate and fix the SQL query:'''),
 
         response = self.llm_manager.invoke(prompt, schema=schema, sql_query=sql_query)
         
-        # Parse the response
         lines = response.split('\n')
         is_valid = lines[0].split(': ')[1].lower() == 'yes'
         issues = lines[1].split(': ')[1]
@@ -172,7 +169,7 @@ Validate and fix the SQL query:'''),
     def execute_sql(self, state: dict) -> dict:
         """Execute SQL query and return results."""
         query = state['sql_query']
-        uuid = state['uuid']  # Get the UUID from the state
+        uuid = state['uuid']
         
         if query == "NOT_RELEVANT":
             return {"results": "NOT_RELEVANT"}
@@ -241,7 +238,6 @@ Recommend a visualization:'''),
 
         response = self.llm_manager.invoke(prompt, question=question, sql_query=sql_query, results=results)
         
-        # Parse the response
         lines = response.split('\n')
         visualization = lines[0].split(': ')[1]
         reason = lines[1].split(': ')[1]
@@ -258,18 +254,16 @@ Recommend a visualization:'''),
         
         if visualization == "scatter":
             try:
-            # Convert results to list of tuples if it's a string representation
                 if isinstance(results, str):
                     results = eval(results)
 
                 print(f"Results: {results}")
                 
-                # Format data for scatter plot
                 formatted_data = {
                     "series": []
                 }
                 
-                if len(results[0]) == 2:  # Single entity case
+                if len(results[0]) == 2:
                     formatted_data["series"].append({
                         "data": [
                             {"x": float(x), "y": float(y), "id": i+1}
@@ -277,7 +271,7 @@ Recommend a visualization:'''),
                         ],
                         "label": "Data Points"
                     })
-                elif len(results[0]) == 3:  # Multiple entities case
+                elif len(results[0]) == 3:
                     entities = {}
                     for label, x, y in results:
                         if label not in entities:
@@ -310,5 +304,3 @@ Recommend a visualization:'''),
             return {"formatted_data_for_visualization": formatted_data_for_visualization}
         except json.JSONDecodeError:
             return {"error": "Failed to format data for visualization", "raw_response": response}
-
-    
