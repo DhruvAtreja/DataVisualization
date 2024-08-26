@@ -1,6 +1,6 @@
 from langgraph.graph import StateGraph
-from my_agent.State import State
-from my_agent.SQLAgent import SQLAgent
+from State import State
+from SQLAgent import SQLAgent
 
 
 class WorkflowManager:

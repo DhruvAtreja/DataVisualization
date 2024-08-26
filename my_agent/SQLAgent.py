@@ -3,9 +3,9 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 from typing import List, Dict
 import json
-from my_agent.DatabaseManager import DatabaseManager
-from my_agent.LLMManager import LLMManager
-from my_agent.graph_instructions import graph_instructions
+from DatabaseManager import DatabaseManager
+from LLMManager import LLMManager
+from graph_instructions import graph_instructions
 
 class SQLAgent:
     def __init__(self):
@@ -251,22 +251,60 @@ Recommend a visualization:'''),
         """Format the data for the chosen visualization type."""
         visualization = state['visualization']
         results = state['results']
+        sql_query = state['sql_query']
 
         if visualization == "none":
             return {"formatted_data_for_visualization": None}
-            
-        instructions = graph_instructions[visualization]
-
-        prompt = ChatPromptTemplate.from_messages([
-            ("system", "You are a Data expert who formats data according to the required needs. You are given some data and the format you need to format it in."),
-            ("human", 'Data: {results}\n\nUse the following example to structure the data: {instructions}. Just give the json string. Do not format it'),
-        ])
-
-        response = self.llm_manager.invoke(prompt, results=results, instructions=instructions)
         
+        if visualization == "scatter":
+            try:
+            # Convert results to list of tuples if it's a string representation
+                if isinstance(results, str):
+                    results = eval(results)
+
+                print(f"Results: {results}")
+                
+                # Format data for scatter plot
+                formatted_data = {
+                    "series": []
+                }
+                
+                if len(results[0]) == 2:  # Single entity case
+                    formatted_data["series"].append({
+                        "data": [
+                            {"x": float(x), "y": float(y), "id": i+1}
+                            for i, (x, y) in enumerate(results)
+                        ],
+                        "label": "Data Points"
+                    })
+                elif len(results[0]) == 3:  # Multiple entities case
+                    entities = {}
+                    for label, x, y in results:
+                        if label not in entities:
+                            entities[label] = []
+                        entities[label].append({"x": float(x), "y": float(y), "id": len(entities[label])+1})
+                    
+                    for label, data in entities.items():
+                        formatted_data["series"].append({
+                            "data": data,
+                            "label": label
+                        })
+                else:
+                    raise ValueError("Unexpected data format in results")                
+
+                return {"formatted_data_for_visualization": formatted_data}
+            except Exception as e:
+                print(f"Error: {e}")
+        
+        instructions = graph_instructions[visualization]
+        prompt = ChatPromptTemplate.from_messages([
+                ("system", "You are a Data expert who formats data according to the required needs. You are given some data and the format you need to format it in."),
+                ("human", 'Data: {results}\n\nUse the following example to structure the data: {instructions}. Just give the json string. Do not format it'),
+            ])
+        response = self.llm_manager.invoke(prompt, results=results, instructions=instructions)
+            
         try:
             print(f"Response: {response}")
-            # Convert the response to JSON
             formatted_data_for_visualization = json.loads(response)
             print(f"Formatted Data for Visualization: {formatted_data_for_visualization}")
             return {"formatted_data_for_visualization": formatted_data_for_visualization}
