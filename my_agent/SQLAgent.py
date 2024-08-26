@@ -3,9 +3,9 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 from typing import List, Dict
 import json
-from DatabaseManager import DatabaseManager
-from LLMManager import LLMManager
-from graph_instructions import graph_instructions
+from my_agent.DatabaseManager import DatabaseManager
+from my_agent.LLMManager import LLMManager
+from my_agent.graph_instructions import graph_instructions
 
 class SQLAgent:
     def __init__(self):
