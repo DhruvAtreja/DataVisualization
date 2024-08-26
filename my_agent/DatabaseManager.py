@@ -1,33 +1,31 @@
-import sqlite3
+import requests
+import os
 from typing import List, Any
 
 
 class DatabaseManager:
     def __init__(self):
-        self.conn = sqlite3.connect('data.sqlite', check_same_thread=False)
-        self.cursor = self.conn.cursor()
+        self.endpoint_url = os.getenv("DB_ENDPOINT_URL")
 
-    def get_schema(self) -> str:
+    def get_schema(self, uuid: str) -> str:
         """Retrieve the database schema."""
-        self.cursor.execute("SELECT name, sql FROM sqlite_master WHERE type='table';")
-        tables = self.cursor.fetchall()
-        schema = []
-        for table_name, create_statement in tables:
-            schema.append(f"Table: {table_name}")
-            schema.append(f"CREATE statement: {create_statement}\n")
-
-            self.cursor.execute(f"SELECT * FROM '{table_name}' LIMIT 3;")
-            example_rows = self.cursor.fetchall()
-            if example_rows:
-                schema.append("Example rows:")
-                schema.extend(str(row) for row in example_rows)
-            schema.append("")  # Add a blank line between tables
-        return "\n".join(schema)
-
-    def execute_query(self, query: str) -> List[Any]:
-        """Execute SQL query and return results."""
         try:
-            self.cursor.execute(query)
-            return self.cursor.fetchall()
-        except sqlite3.Error as e:
-            raise e
+            response = requests.get(
+                f"{self.endpoint_url}/get-schema/{uuid}"
+            )
+            response.raise_for_status()
+            return response.json()
+        except requests.RequestException as e:
+            raise Exception(f"Error fetching schema: {str(e)}")
+
+    def execute_query(self, uuid: str, query: str) -> List[Any]:
+        """Execute SQL query on the remote database and return results."""
+        try:
+            response = requests.post(
+                f"{self.endpoint_url}/execute-query",
+                json={"uuid": uuid, "query": query}
+            )
+            response.raise_for_status()
+            return response.json()
+        except requests.RequestException as e:
+            raise Exception(f"Error executing query: {str(e)}")

@@ -4,6 +4,7 @@ import operator
 
 class State(TypedDict):
     question: str
+    uuid: str  # Add this line to include UUID in the state
     parsed_question: Dict[str, Any]
     unique_nouns: List[str]
     sql_query: str

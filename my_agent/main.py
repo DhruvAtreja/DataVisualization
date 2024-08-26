@@ -11,8 +11,8 @@ graph = WorkflowManager().returnGraph()
 # if __name__ == "__main__":
 #     EnvironmentManager.setup_environment()
 #     workflow_manager = WorkflowManager()
-#     question = "relation between income and quantity for men and women, in a scatter plot"
-#     result = workflow_manager.run_sql_agent(question)
+#     question = "income of men and women"
+#     result = workflow_manager.run_sql_agent(question, "2e5aaa22-bb8c-485b-a197-93d119309aa6")
 #     print(f"Question: {question}")
 #     print(f"Answer: {result['answer']}")
 #     print(f"Recommended Visualization: {result['visualization']}")

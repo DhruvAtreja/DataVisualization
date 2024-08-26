@@ -15,7 +15,7 @@ class SQLAgent:
     def parse_question(self, state: dict) -> dict:
         """Parse user question and identify relevant tables and columns."""
         question = state['question']
-        schema = self.db_manager.get_schema()
+        schema = self.db_manager.get_schema(state['uuid'])
 
         prompt = ChatPromptTemplate.from_messages([
             ("system", '''You are a data analyst that can help summarize SQL tables and parse user questions about a database. 
@@ -60,7 +60,7 @@ Note: The "noun_columns" field should contain only the columns that likely conta
                 # Get unique values from the noun columns
                 column_names = ', '.join(f"'{col}'" for col in noun_columns)
                 query = f"SELECT DISTINCT {column_names} FROM '{table_name}'"
-                results = self.db_manager.execute_query(query)
+                results = self.db_manager.execute_query(state['uuid'], query)
                 
                 # Add all unique values to the set
                 for row in results:
@@ -77,7 +77,7 @@ Note: The "noun_columns" field should contain only the columns that likely conta
         if not parsed_question['is_relevant']:
             return {"sql_query": "NOT_RELEVANT", "is_relevant": False}
     
-        schema = self.db_manager.get_schema()
+        schema = self.db_manager.get_schema(state['uuid'])
 
         prompt = ChatPromptTemplate.from_messages([
             ("system", '''
@@ -130,7 +130,7 @@ Generate SQL query string'''),
         
 
     
-        schema = self.db_manager.get_schema()
+        schema = self.db_manager.get_schema(state['uuid'])
 
         prompt = ChatPromptTemplate.from_messages([
             ("system", '''
@@ -172,14 +172,15 @@ Validate and fix the SQL query:'''),
     def execute_sql(self, state: dict) -> dict:
         """Execute SQL query and return results."""
         query = state['sql_query']
+        uuid = state['uuid']  # Get the UUID from the state
         
         if query == "NOT_RELEVANT":
             return {"results": "NOT_RELEVANT"}
 
         try:
-            results = self.db_manager.execute_query(query)
+            results = self.db_manager.execute_query(uuid, query)
             return {"results": results}
-        except sqlite3.Error as e:
+        except Exception as e:
             return {"error": str(e)}
 
     def format_results(self, state: dict) -> dict:
@@ -251,7 +252,6 @@ Recommend a visualization:'''),
         """Format the data for the chosen visualization type."""
         visualization = state['visualization']
         results = state['results']
-        sql_query = state['sql_query']
 
         if visualization == "none":
             return {"formatted_data_for_visualization": None}
