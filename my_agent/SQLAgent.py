@@ -248,6 +248,8 @@ Recommend a visualization:'''),
         """Format the data for the chosen visualization type."""
         visualization = state['visualization']
         results = state['results']
+        question = state['question']
+        sql_query = state['sql_query']
 
         if visualization == "none":
             return {"formatted_data_for_visualization": None}
@@ -295,7 +297,7 @@ Recommend a visualization:'''),
                 ("system", "You are a Data expert who formats data according to the required needs. You are given the question asked by the user, it's sql query, the result of the query and the format you need to format it in."),
                 ("human", 'For the given question: {question}\n\nSQL query: {sql_query}\n\Result: {results}\n\nUse the following example to structure the data: {instructions}. Just give the json string. Do not format it'),
             ])
-        response = self.llm_manager.invoke(prompt, results=results, instructions=instructions)
+        response = self.llm_manager.invoke(prompt, question=question, sql_query=sql_query, results=results, instructions=instructions)
             
         try:
             print(f"Response: {response}")
