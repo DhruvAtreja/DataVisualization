@@ -292,8 +292,8 @@ Recommend a visualization:'''),
         
         instructions = graph_instructions[visualization]
         prompt = ChatPromptTemplate.from_messages([
-                ("system", "You are a Data expert who formats data according to the required needs. You are given some data and the format you need to format it in."),
-                ("human", 'Data: {results}\n\nUse the following example to structure the data: {instructions}. Just give the json string. Do not format it'),
+                ("system", "You are a Data expert who formats data according to the required needs. You are given the question asked by the user, it's sql query, the result of the query and the format you need to format it in."),
+                ("human", 'For the given question: {question}\n\nSQL query: {sql_query}\n\Result: {results}\n\nUse the following example to structure the data: {instructions}. Just give the json string. Do not format it'),
             ])
         response = self.llm_manager.invoke(prompt, results=results, instructions=instructions)
             
