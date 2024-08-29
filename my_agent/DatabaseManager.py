@@ -6,6 +6,7 @@ from typing import List, Any
 class DatabaseManager:
     def __init__(self):
         self.endpoint_url = os.getenv("DB_ENDPOINT_URL")
+        print(f"endpoint_url: {self.endpoint_url}")
 
     def get_schema(self, uuid: str) -> str:
         """Retrieve the database schema."""
