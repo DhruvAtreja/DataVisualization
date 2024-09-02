@@ -1,5 +1,3 @@
-# SQL Agent with Workflow Management
-
 This project implements an intelligent SQL agent with a structured workflow for processing natural language questions, generating SQL queries, and providing visualizations. Here are the other repositories for the project:
 
 - [Frontend](https://github.com/DhruvAtreja/data-visualization-frontend)
