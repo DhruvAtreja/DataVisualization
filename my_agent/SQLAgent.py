@@ -397,6 +397,7 @@ Recommend a visualization:'''),
 
         return {"formatted_data_for_visualization": formatted_data}
 
+
     def _format_bar_data(self, results, question):
         if isinstance(results, str):
             results = eval(results)

@@ -10,7 +10,6 @@ class WorkflowManager:
     def create_workflow(self) -> StateGraph:
         """Create and configure the workflow graph."""
         workflow = StateGraph(State)
-
         # Add nodes to the graph
         workflow.add_node("parse_question", self.sql_agent.parse_question)
         workflow.add_node("get_unique_nouns", self.sql_agent.get_unique_nouns)
