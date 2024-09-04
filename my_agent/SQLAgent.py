@@ -6,7 +6,6 @@ import json
 from my_agent.DatabaseManager import DatabaseManager
 from my_agent.LLMManager import LLMManager
 from my_agent.graph_instructions import graph_instructions
-import time
 
 class SQLAgent:
     def __init__(self):
@@ -42,7 +41,6 @@ The "noun_columns" field should contain only the columns that are relevant to th
 
         output_parser = JsonOutputParser()
         
-        time.sleep(5)  # Wait for 5 seconds before continuing
         response = self.llm_manager.invoke(prompt, schema=schema, question=question)
         parsed_response = output_parser.parse(response)
         return {"parsed_question": parsed_response}
