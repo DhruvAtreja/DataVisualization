@@ -1,9 +1,11 @@
 This project implements an intelligent SQL agent with a structured workflow for processing natural language questions, generating SQL queries, and providing visualizations. Here are the other repositories for the project:
 
 - [Frontend](https://github.com/DhruvAtreja/data-visualization-frontend)
-- [Server to handle .sqlite and .csv files](https://github.com/DhruvAtreja/DataVisualization)
+- [Server to handle .sqlite and .csv files](https://github.com/DhruvAtreja/sqllite-server)
 
 The project is deployed [here](https://data-visualization-frontend-gamma.vercel.app/).
+
+![SQL Agent Workflow](graph.png)
 
 ## Features
 
@@ -31,8 +33,15 @@ The `SQLAgent` class (not shown in the provided code) likely contains the implem
 - Generating SQL queries
 - Validating and fixing SQL
 - Executing SQL queries
-- Formatting results
-- Choosing and formatting visualizations
+- Choosing visualizations
+
+### DataFormatter
+
+The `DataFormatter` class is responsible for formatting the data for the chosen visualization type.
+
+Key methods:
+
+- `format_data_for_visualization()`: Formats the data for the chosen visualization type.
 
 ## Usage
 

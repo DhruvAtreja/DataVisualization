@@ -1,11 +1,12 @@
 from langgraph.graph import StateGraph
 from my_agent.State import State
 from my_agent.SQLAgent import SQLAgent
-
+from my_agent.DataFormatter import DataFormatter
 
 class WorkflowManager:
     def __init__(self):
         self.sql_agent = SQLAgent()
+        self.data_formatter = DataFormatter()
 
     def create_workflow(self) -> StateGraph:
         """Create and configure the workflow graph."""
@@ -18,7 +19,7 @@ class WorkflowManager:
         workflow.add_node("execute_sql", self.sql_agent.execute_sql)
         workflow.add_node("format_results", self.sql_agent.format_results)
         workflow.add_node("choose_visualization", self.sql_agent.choose_visualization)
-        workflow.add_node("format_data_for_visualization", self.sql_agent.format_data_for_visualization)
+        workflow.add_node("format_data_for_visualization", self.data_formatter.format_data_for_visualization)
         # Define edges
         workflow.add_edge("parse_question", "get_unique_nouns")
         workflow.add_edge("get_unique_nouns", "generate_sql")

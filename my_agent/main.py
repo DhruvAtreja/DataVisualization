@@ -11,7 +11,7 @@ graph = WorkflowManager().returnGraph()
 # if __name__ == "__main__":
 #     EnvironmentManager.setup_environment()
 #     workflow_manager = WorkflowManager()
-#     question = "income over time for each gender"
+#     question = "distrubution of spending of men and women over time"
 #     result = workflow_manager.run_sql_agent(question, "921c838c-541d-4361-8c96-70cb23abd9f5")
 #     print(f"result: {result}")
     

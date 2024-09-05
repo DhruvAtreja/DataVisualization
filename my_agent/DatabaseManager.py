@@ -6,7 +6,6 @@ from typing import List, Any
 class DatabaseManager:
     def __init__(self):
         self.endpoint_url = os.getenv("DB_ENDPOINT_URL")
-        print(f"endpoint_url: {self.endpoint_url}")
 
     def get_schema(self, uuid: str) -> str:
         """Retrieve the database schema."""
@@ -15,7 +14,6 @@ class DatabaseManager:
                 f"{self.endpoint_url}/get-schema/{uuid}"
             )
             response.raise_for_status()
-            print(f"response: {response.json()}\n\n")
             return response.json()['schema']
         except requests.RequestException as e:
             raise Exception(f"Error fetching schema: {str(e)}")
@@ -28,7 +26,6 @@ class DatabaseManager:
                 json={"uuid": uuid, "query": query}
             )
             response.raise_for_status()
-            print(f"response: {response.json()}\n\n")
             return response.json()['results']
         except requests.RequestException as e:
             raise Exception(f"Error executing query: {str(e)}")
