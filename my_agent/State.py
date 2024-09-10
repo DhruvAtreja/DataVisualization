@@ -1,10 +1,17 @@
-from typing import List, Any, Annotated, Dict
+from typing import List, Any, Annotated, Dict, Optional
 from typing_extensions import TypedDict
 import operator
 
-class State(TypedDict):
+class InputState(TypedDict):
     question: str
     uuid: str
+    parsed_question: Dict[str, Any]
+    unique_nouns: List[str]
+    sql_query: str
+    results: List[Any]
+    visualization: Annotated[str, operator.add]
+
+class OutputState(TypedDict):
     parsed_question: Dict[str, Any]
     unique_nouns: List[str]
     sql_query: str

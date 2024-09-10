@@ -1,5 +1,4 @@
 import json
-from typing import List, Dict, Any
 from langchain_core.prompts import ChatPromptTemplate
 from my_agent.LLMManager import LLMManager
 from my_agent.graph_instructions import graph_instructions
@@ -71,6 +70,15 @@ class DataFormatter:
             data_by_label = {}
             x_values = []
 
+            # Get a list of unique labels
+            labels = list(set(item2 for item1, item2, item3 in results 
+                              if isinstance(item2, str) and not item2.replace(".", "").isdigit() and "/" not in item2))
+            
+            # If labels are not in the second position, check the first position
+            if not labels:
+                labels = list(set(item1 for item1, item2, item3 in results 
+                                  if isinstance(item1, str) and not item1.replace(".", "").isdigit() and "/" not in item1))
+
             for item1, item2, item3 in results:
                 # Determine which item is the label (string not convertible to float and not containing "/")
                 if isinstance(item1, str) and not item1.replace(".", "").isdigit() and "/" not in item1:
@@ -84,6 +92,12 @@ class DataFormatter:
                 if label not in data_by_label:
                     data_by_label[label] = []
                 data_by_label[label].append(float(y))
+                print(labels)
+                for other_label in labels:
+                    if other_label != label:
+                        if other_label not in data_by_label:
+                            data_by_label[other_label] = []
+                        data_by_label[other_label].append(None)
 
             # Create yValues array
             y_values = [
@@ -96,7 +110,8 @@ class DataFormatter:
 
             formatted_data = {
                 "xValues": x_values,
-                "yValues": y_values
+                "yValues": y_values,
+                "yAxisLabel": ""
             }
 
             # Use LLM to get a relevant label for the y-axis
